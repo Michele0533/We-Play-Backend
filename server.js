@@ -17,7 +17,7 @@ mongoose.connect(process.env.MONGO_URL)
   .catch((err) => console.log("❌ MongoDB error:", err));
 
 /* =========================
- 📦 MODELS (ORIGINAL)
+ 📦 MODELS
 ========================= */
 const gameSchema = new mongoose.Schema({
   id: Number,
@@ -77,6 +77,23 @@ app.post("/api/movies", async (req, res) => {
 app.delete("/api/movies/:id", async (req, res) => {
   await Movie.deleteOne({ id: req.params.id });
   res.json({ message: "deleted" });
+});
+
+/* =========================
+ 🔁 PATCH STATUS (NEU)
+========================= */
+app.patch("/api/movies/:id", async (req, res) => {
+  try {
+    const updated = await Movie.findOneAndUpdate(
+      { id: Number(req.params.id) },
+      { $set: { status: req.body.status } },
+      { new: true }
+    );
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "update failed" });
+  }
 });
 
 /* =========================
