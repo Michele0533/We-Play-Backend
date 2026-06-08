@@ -28,7 +28,8 @@ const gameSchema = new mongoose.Schema({
 const movieSchema = new mongoose.Schema({
   id: Number,
   name: String,
-  image: String
+  image: String,
+  status: { type: String, default: "watchlist" } // ✅ FIX
 });
 
 const Game = mongoose.model("Game", gameSchema);
@@ -80,7 +81,7 @@ app.delete("/api/movies/:id", async (req, res) => {
 });
 
 /* =========================
- 🔁 PATCH STATUS (NEU)
+ 🔁 PATCH STATUS
 ========================= */
 app.patch("/api/movies/:id", async (req, res) => {
   try {
