@@ -17,28 +17,18 @@ mongoose.connect(process.env.MONGO_URL)
   .catch((err) => console.log("❌ MongoDB error:", err));
 
 /* =========================
- 📦 MODELS (FIX: STATUS HINZUGEFÜGT)
+ 📦 MODELS (ORIGINAL)
 ========================= */
 const gameSchema = new mongoose.Schema({
   id: Number,
   name: String,
-  image: String,
-  status: {
-    type: String,
-    enum: ["watchlist", "seen", "rewatch"],
-    default: "watchlist"
-  }
+  image: String
 });
 
 const movieSchema = new mongoose.Schema({
   id: Number,
   name: String,
-  image: String,
-  status: {
-    type: String,
-    enum: ["watchlist", "seen", "rewatch"],
-    default: "watchlist"
-  }
+  image: String
 });
 
 const Game = mongoose.model("Game", gameSchema);
@@ -52,7 +42,7 @@ app.get("/ping", (req, res) => {
 });
 
 /* =========================
- 🎮 GAMES ROUTES (UNVERÄNDERT)
+ 🎮 GAMES ROUTES
 ========================= */
 app.get("/api/games", async (req, res) => {
   const games = await Game.find();
@@ -70,21 +60,8 @@ app.delete("/api/games/:id", async (req, res) => {
   res.json({ message: "deleted" });
 });
 
-/* 🔥 NEU: GAME STATUS UPDATE */
-app.patch("/api/games/:id/status", async (req, res) => {
-  const { status } = req.body;
-
-  const updated = await Game.findOneAndUpdate(
-    { id: req.params.id },
-    { status },
-    { new: true }
-  );
-
-  res.json(updated);
-});
-
 /* =========================
- 🎬 MOVIES ROUTES (UNVERÄNDERT)
+ 🎬 MOVIES ROUTES
 ========================= */
 app.get("/api/movies", async (req, res) => {
   const movies = await Movie.find();
@@ -102,26 +79,8 @@ app.delete("/api/movies/:id", async (req, res) => {
   res.json({ message: "deleted" });
 });
 
-/* 🔥 NEU: MOVIE STATUS UPDATE (FÜR DEINE 3 LEISTEN) */
-app.patch("/api/movies/:id/status", async (req, res) => {
-  const { status } = req.body;
-
-  const allowed = ["watchlist", "seen", "rewatch"];
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ error: "invalid status" });
-  }
-
-  const updated = await Movie.findOneAndUpdate(
-    { id: req.params.id },
-    { status },
-    { new: true }
-  );
-
-  res.json(updated);
-});
-
 /* =========================
- 🚀 SERVER START (FIXED LOG)
+ 🚀 SERVER START
 ========================= */
 const PORT = process.env.PORT || 3000;
 
