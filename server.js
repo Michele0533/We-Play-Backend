@@ -10,14 +10,14 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
-   MONGODB CONNECT
+ 🧠 MONGODB CONNECT
 ========================= */
 mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.log("❌ MongoDB error:", err));
 
 /* =========================
-   MODELS (DEIN ORIGINAL + ERWEITERT)
+ 📦 MODELS (FIX: STATUS HINZUGEFÜGT)
 ========================= */
 const gameSchema = new mongoose.Schema({
   id: Number,
@@ -45,14 +45,46 @@ const Game = mongoose.model("Game", gameSchema);
 const Movie = mongoose.model("Movie", movieSchema);
 
 /* =========================
-   PING
+ ❤️ PING
 ========================= */
 app.get("/ping", (req, res) => {
   res.send("ok");
 });
 
 /* =========================
-   🎬 MOVIES (DEIN ORIGINAL)
+ 🎮 GAMES ROUTES (UNVERÄNDERT)
+========================= */
+app.get("/api/games", async (req, res) => {
+  const games = await Game.find();
+  res.json(games);
+});
+
+app.post("/api/games", async (req, res) => {
+  const newGame = new Game(req.body);
+  await newGame.save();
+  res.json(newGame);
+});
+
+app.delete("/api/games/:id", async (req, res) => {
+  await Game.deleteOne({ id: req.params.id });
+  res.json({ message: "deleted" });
+});
+
+/* 🔥 NEU: GAME STATUS UPDATE */
+app.patch("/api/games/:id/status", async (req, res) => {
+  const { status } = req.body;
+
+  const updated = await Game.findOneAndUpdate(
+    { id: req.params.id },
+    { status },
+    { new: true }
+  );
+
+  res.json(updated);
+});
+
+/* =========================
+ 🎬 MOVIES ROUTES (UNVERÄNDERT)
 ========================= */
 app.get("/api/movies", async (req, res) => {
   const movies = await Movie.find();
@@ -60,9 +92,9 @@ app.get("/api/movies", async (req, res) => {
 });
 
 app.post("/api/movies", async (req, res) => {
-  const movie = new Movie(req.body);
-  await movie.save();
-  res.json(movie);
+  const newMovie = new Movie(req.body);
+  await newMovie.save();
+  res.json(newMovie);
 });
 
 app.delete("/api/movies/:id", async (req, res) => {
@@ -70,7 +102,7 @@ app.delete("/api/movies/:id", async (req, res) => {
   res.json({ message: "deleted" });
 });
 
-/* 🔥 NEU: STATUS UPDATE (DAS BRAUCHST DU FÜR LEISTEN) */
+/* 🔥 NEU: MOVIE STATUS UPDATE (FÜR DEINE 3 LEISTEN) */
 app.patch("/api/movies/:id/status", async (req, res) => {
   const { status } = req.body;
 
@@ -89,44 +121,7 @@ app.patch("/api/movies/:id/status", async (req, res) => {
 });
 
 /* =========================
-   🎮 GAMES (UNVERÄNDERT + ERWEITERT)
-========================= */
-app.get("/api/games", async (req, res) => {
-  const games = await Game.find();
-  res.json(games);
-});
-
-app.post("/api/games", async (req, res) => {
-  const game = new Game(req.body);
-  await game.save();
-  res.json(game);
-});
-
-app.delete("/api/games/:id", async (req, res) => {
-  await Game.deleteOne({ id: req.params.id });
-  res.json({ message: "deleted" });
-});
-
-/* 🔥 NEU: STATUS UPDATE GAMES */
-app.patch("/api/games/:id/status", async (req, res) => {
-  const { status } = req.body;
-
-  const allowed = ["watchlist", "seen", "rewatch"];
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ error: "invalid status" });
-  }
-
-  const updated = await Game.findOneAndUpdate(
-    { id: req.params.id },
-    { status },
-    { new: true }
-  );
-
-  res.json(updated);
-});
-
-/* =========================
-   SERVER START
+ 🚀 SERVER START (FIXED LOG)
 ========================= */
 const PORT = process.env.PORT || 3000;
 
