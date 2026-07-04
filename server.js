@@ -121,20 +121,39 @@ app.get("/api/genshin/player/:uid", async (req, res) => {
 /* =========================
  🏆 BEST CHARACTER (FIXED REPLACEMENT FOR AKASHA)
 ========================= */
-app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
+app.get("/api/genshin/player/:uid", async (req, res) => {
   try {
-    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
-    const data = await response.json();
+    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      }
+    });
 
-    const characters = data.avatarInfoList || [];
+    const text = await response.text();
 
-    if (characters.length === 0) {
-      return res.json({
-        uid: req.params.uid,
-        bestCharacter: null,
-        message: "No characters found",
+    // 🚨 detect HTML response
+    if (text.trim().startsWith("<")) {
+      return res.status(500).json({
+        error: "Enka returned HTML (blocked or rate limited)",
+        preview: text.slice(0, 200)
       });
     }
+
+    const data = JSON.parse(text);
+
+    res.json({
+      uid: req.params.uid,
+      characters: data.avatarInfoList || [],
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      error: "Enka failed",
+      details: err.message,
+    });
+  }
+});
 
     // simple "best" logic = highest level
     let best = characters[0];
