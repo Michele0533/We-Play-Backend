@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
- 🧠 MONGODB CONNECT
+ 🧠 MONGO DB
 ========================= */
 mongoose
   .connect(process.env.MONGO_URL)
@@ -39,123 +39,142 @@ const Game = mongoose.model("Game", gameSchema);
 const Movie = mongoose.model("Movie", movieSchema);
 
 /* =========================
- ❤️ BASIC ROUTES
+ ❤️ BASIC
 ========================= */
 app.get("/ping", (req, res) => {
   res.send("ok");
 });
 
 /* =========================
- 🎮 GAMES ROUTES
+ 🎮 GAMES
 ========================= */
 app.get("/api/games", async (req, res) => {
-  const games = await Game.find();
-  res.json(games);
+  res.json(await Game.find());
 });
 
 app.post("/api/games", async (req, res) => {
-  const newGame = new Game(req.body);
-  await newGame.save();
-  res.json(newGame);
+  const g = new Game(req.body);
+  await g.save();
+  res.json(g);
 });
 
 app.delete("/api/games/:id", async (req, res) => {
   await Game.deleteOne({ id: req.params.id });
-  res.json({ message: "deleted" });
+  res.json({ ok: true });
 });
 
 /* =========================
- 🎬 MOVIES ROUTES
+ 🎬 MOVIES
 ========================= */
 app.get("/api/movies", async (req, res) => {
-  const movies = await Movie.find();
-  res.json(movies);
+  res.json(await Movie.find());
 });
 
 app.post("/api/movies", async (req, res) => {
-  const newMovie = new Movie(req.body);
-  await newMovie.save();
-  res.json(newMovie);
+  const m = new Movie(req.body);
+  await m.save();
+  res.json(m);
 });
 
 app.delete("/api/movies/:id", async (req, res) => {
   await Movie.deleteOne({ id: req.params.id });
-  res.json({ message: "deleted" });
-});
-
-app.patch("/api/movies/:id", async (req, res) => {
-  try {
-    const updated = await Movie.findOneAndUpdate(
-      { id: Number(req.params.id) },
-      { $set: { status: req.body.status } },
-      { new: true }
-    );
-
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: "update failed" });
-  }
+  res.json({ ok: true });
 });
 
 /* =========================
- 🎮 GENSHIN CONSTANTS
+ 🎮 GENSHIN API
 ========================= */
+
 const ENKA_BASE = "https://enka.network/api/uid";
 const AKASHA_BASE = "https://akasha.cv/api";
-const AMBR_BANNER_URL = "https://api.ambr.top/v2/en/gacha";
+const AMBR_BANNER = "https://api.ambr.top/v2/en/gacha";
 
 /* =========================
- 👤 PLAYER (ENKA)
+ 🔁 SIMPLE RETRY FETCH
+========================= */
+async function fetchWithRetry(url, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "application/json",
+        },
+      });
+
+      if (res.ok) return await res.json();
+    } catch (e) {}
+
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  throw new Error("Request failed after retries");
+}
+
+/* =========================
+ 👤 ENKA PLAYER
 ========================= */
 app.get("/api/genshin/player/:uid", async (req, res) => {
   try {
-    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
-    const data = await response.json();
+    const data = await fetchWithRetry(`${ENKA_BASE}/${req.params.uid}`);
 
     res.json({
       uid: req.params.uid,
       characters: data.avatarInfoList || [],
     });
   } catch (err) {
-    res.status(500).json({ error: "Enka fetch failed" });
+    res.status(500).json({
+      error: "Enka failed",
+      details: err.message,
+    });
   }
 });
 
 /* =========================
- 🏆 AKASHA RANKINGS
+ 🏆 AKASHA RANKINGS (FIXED)
 ========================= */
 app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
   try {
-    const response = await fetch(`${AKASHA_BASE}/profile/${req.params.uid}`);
-    const data = await response.json();
+    const url = `${AKASHA_BASE}/profile/${req.params.uid}`;
+
+    const data = await fetchWithRetry(url);
 
     res.json({
       uid: req.params.uid,
       rankings: data,
     });
   } catch (err) {
-    res.status(500).json({ error: "Akasha fetch failed" });
+    res.json({
+      uid: req.params.uid,
+      rankings: {
+        error: true,
+        message: "Akasha failed or blocked",
+        details: err.message,
+      },
+    });
   }
 });
 
 /* =========================
- 🎉 CURRENT BANNERS
+ 🎉 BANNERS
 ========================= */
 app.get("/api/genshin/banners/current", async (req, res) => {
   try {
-    const response = await fetch(AMBR_BANNER_URL);
-    const data = await response.json();
+    const data = await fetchWithRetry(AMBR_BANNER);
 
     res.json({
       banners: data.data || data,
     });
   } catch (err) {
-    res.status(500).json({ error: "Banner fetch failed" });
+    res.status(500).json({
+      error: "Banner failed",
+      details: err.message,
+    });
   }
 });
 
 /* =========================
- 📖 BUILDS (LOCAL JSON)
+ 📖 BUILDS
 ========================= */
 app.get("/api/genshin/builds/:character", (req, res) => {
   try {
@@ -167,18 +186,17 @@ app.get("/api/genshin/builds/:character", (req, res) => {
       return res.status(404).json({ error: "Build not found" });
     }
 
-    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    res.json(data);
+    res.json(JSON.parse(fs.readFileSync(filePath, "utf-8")));
   } catch (err) {
-    res.status(500).json({ error: "Build load failed" });
+    res.status(500).json({ error: "Build error" });
   }
 });
 
 /* =========================
- 🚀 SERVER START
+ 🚀 START SERVER
 ========================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server läuft auf Port ${PORT}`);
+  console.log(`🚀 Server running on ${PORT}`);
 });
