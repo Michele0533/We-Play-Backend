@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import axios from "axios";
 import fs from "fs";
 import path from "path";
 
@@ -99,16 +98,10 @@ app.patch("/api/movies/:id", async (req, res) => {
 });
 
 /* =========================
- 🎮 GENSHIN APIs
+ 🎮 GENSHIN CONSTANTS
 ========================= */
-
-/* ---- Enka ---- */
 const ENKA_BASE = "https://enka.network/api/uid";
-
-/* ---- Akasha ---- */
 const AKASHA_BASE = "https://akasha.cv/api";
-
-/* ---- Banner ---- */
 const AMBR_BANNER_URL = "https://api.ambr.top/v2/en/gacha";
 
 /* =========================
@@ -116,11 +109,12 @@ const AMBR_BANNER_URL = "https://api.ambr.top/v2/en/gacha";
 ========================= */
 app.get("/api/genshin/player/:uid", async (req, res) => {
   try {
-    const response = await axios.get(`${ENKA_BASE}/${req.params.uid}`);
+    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
+    const data = await response.json();
 
     res.json({
       uid: req.params.uid,
-      characters: response.data.avatarInfoList || [],
+      characters: data.avatarInfoList || [],
     });
   } catch (err) {
     res.status(500).json({ error: "Enka fetch failed" });
@@ -132,13 +126,12 @@ app.get("/api/genshin/player/:uid", async (req, res) => {
 ========================= */
 app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
   try {
-    const response = await axios.get(
-      `${AKASHA_BASE}/profile/${req.params.uid}`
-    );
+    const response = await fetch(`${AKASHA_BASE}/profile/${req.params.uid}`);
+    const data = await response.json();
 
     res.json({
       uid: req.params.uid,
-      rankings: response.data,
+      rankings: data,
     });
   } catch (err) {
     res.status(500).json({ error: "Akasha fetch failed" });
@@ -150,10 +143,11 @@ app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
 ========================= */
 app.get("/api/genshin/banners/current", async (req, res) => {
   try {
-    const response = await axios.get(AMBR_BANNER_URL);
+    const response = await fetch(AMBR_BANNER_URL);
+    const data = await response.json();
 
     res.json({
-      banners: response.data.data || response.data,
+      banners: data.data || data,
     });
   } catch (err) {
     res.status(500).json({ error: "Banner fetch failed" });
