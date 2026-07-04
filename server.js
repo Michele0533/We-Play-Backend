@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
- 🧠 MONGO DB
+ 🧠 MONGO
 ========================= */
 mongoose
   .connect(process.env.MONGO_URL)
@@ -39,7 +39,7 @@ const Game = mongoose.model("Game", gameSchema);
 const Movie = mongoose.model("Movie", movieSchema);
 
 /* =========================
- ❤️ BASIC
+ ❤️ PING
 ========================= */
 app.get("/ping", (req, res) => {
   res.send("ok");
@@ -81,42 +81,30 @@ app.delete("/api/movies/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+app.patch("/api/movies/:id", async (req, res) => {
+  const updated = await Movie.findOneAndUpdate(
+    { id: Number(req.params.id) },
+    { $set: { status: req.body.status } },
+    { new: true }
+  );
+
+  res.json(updated);
+});
+
 /* =========================
- 🎮 GENSHIN API
+ 🎮 GENSHIN (ENKA ONLY)
 ========================= */
 
 const ENKA_BASE = "https://enka.network/api/uid";
-const AKASHA_BASE = "https://akasha.cv/api";
 const AMBR_BANNER = "https://api.ambr.top/v2/en/gacha";
 
 /* =========================
- 🔁 SIMPLE RETRY FETCH
-========================= */
-async function fetchWithRetry(url, retries = 2) {
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Accept": "application/json",
-        },
-      });
-
-      if (res.ok) return await res.json();
-    } catch (e) {}
-
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
-  throw new Error("Request failed after retries");
-}
-
-/* =========================
- 👤 ENKA PLAYER
+ 👤 PLAYER + BEST CHARACTER
 ========================= */
 app.get("/api/genshin/player/:uid", async (req, res) => {
   try {
-    const data = await fetchWithRetry(`${ENKA_BASE}/${req.params.uid}`);
+    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
+    const data = await response.json();
 
     res.json({
       uid: req.params.uid,
@@ -131,26 +119,47 @@ app.get("/api/genshin/player/:uid", async (req, res) => {
 });
 
 /* =========================
- 🏆 AKASHA RANKINGS (FIXED)
+ 🏆 BEST CHARACTER (FIXED REPLACEMENT FOR AKASHA)
 ========================= */
 app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
   try {
-    const url = `${AKASHA_BASE}/profile/${req.params.uid}`;
+    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
+    const data = await response.json();
 
-    const data = await fetchWithRetry(url);
+    const characters = data.avatarInfoList || [];
+
+    if (characters.length === 0) {
+      return res.json({
+        uid: req.params.uid,
+        bestCharacter: null,
+        message: "No characters found",
+      });
+    }
+
+    // simple "best" logic = highest level
+    let best = characters[0];
+
+    for (const c of characters) {
+      const lvlA = c.avatarLevel || 0;
+      const lvlB = best.avatarLevel || 0;
+
+      if (lvlA > lvlB) best = c;
+    }
 
     res.json({
       uid: req.params.uid,
-      rankings: data,
+      bestCharacter: {
+        name: best.avatarName || best.name,
+        level: best.avatarLevel,
+        artifacts: best.equipList || [],
+        weapon: best.weapon || null,
+        constellations: best.talentIdList || [],
+      },
     });
   } catch (err) {
-    res.json({
-      uid: req.params.uid,
-      rankings: {
-        error: true,
-        message: "Akasha failed or blocked",
-        details: err.message,
-      },
+    res.status(500).json({
+      error: "Enka failed",
+      details: err.message,
     });
   }
 });
@@ -160,7 +169,8 @@ app.get("/api/genshin/player/:uid/rankings", async (req, res) => {
 ========================= */
 app.get("/api/genshin/banners/current", async (req, res) => {
   try {
-    const data = await fetchWithRetry(AMBR_BANNER);
+    const response = await fetch(AMBR_BANNER);
+    const data = await response.json();
 
     res.json({
       banners: data.data || data,
@@ -174,7 +184,7 @@ app.get("/api/genshin/banners/current", async (req, res) => {
 });
 
 /* =========================
- 📖 BUILDS
+ 📖 BUILDS (LOCAL JSON)
 ========================= */
 app.get("/api/genshin/builds/:character", (req, res) => {
   try {
@@ -193,7 +203,7 @@ app.get("/api/genshin/builds/:character", (req, res) => {
 });
 
 /* =========================
- 🚀 START SERVER
+ 🚀 START
 ========================= */
 const PORT = process.env.PORT || 3000;
 
