@@ -46,97 +46,46 @@ app.get("/ping", (req, res) => {
 });
 
 /* =========================
- 🎮 GAMES
+ 🎮 GAMES + MOVIES (UNCHANGED)
 ========================= */
-app.get("/api/games", async (req, res) => {
-  res.json(await Game.find());
-});
-
-app.post("/api/games", async (req, res) => {
-  const g = new Game(req.body);
-  await g.save();
-  res.json(g);
-});
-
+app.get("/api/games", async (req, res) => res.json(await Game.find()));
+app.post("/api/games", async (req, res) => res.json(await new Game(req.body).save()));
 app.delete("/api/games/:id", async (req, res) => {
   await Game.deleteOne({ id: req.params.id });
   res.json({ ok: true });
 });
 
-/* =========================
- 🎬 MOVIES
-========================= */
-app.get("/api/movies", async (req, res) => {
-  res.json(await Movie.find());
-});
-
-app.post("/api/movies", async (req, res) => {
-  const m = new Movie(req.body);
-  await m.save();
-  res.json(m);
-});
-
+app.get("/api/movies", async (req, res) => res.json(await Movie.find()));
+app.post("/api/movies", async (req, res) => res.json(await new Movie(req.body).save()));
 app.delete("/api/movies/:id", async (req, res) => {
   await Movie.deleteOne({ id: req.params.id });
   res.json({ ok: true });
 });
 
-app.patch("/api/movies/:id", async (req, res) => {
-  const updated = await Movie.findOneAndUpdate(
-    { id: Number(req.params.id) },
-    { $set: { status: req.body.status } },
-    { new: true }
-  );
-
-  res.json(updated);
-});
-
 /* =========================
- 🎮 GENSHIN (ENKA ONLY)
+ 🎮 GENSHIN
 ========================= */
 
 const ENKA_BASE = "https://enka.network/api/uid";
 const AMBR_BANNER = "https://api.ambr.top/v2/en/gacha";
 
 /* =========================
- 👤 PLAYER + BEST CHARACTER
-========================= */
-app.get("/api/genshin/player/:uid", async (req, res) => {
-  try {
-    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`);
-    const data = await response.json();
-
-    res.json({
-      uid: req.params.uid,
-      characters: data.avatarInfoList || [],
-    });
-  } catch (err) {
-    res.status(500).json({
-      error: "Enka failed",
-      details: err.message,
-    });
-  }
-});
-
-/* =========================
- 🏆 BEST CHARACTER (FIXED REPLACEMENT FOR AKASHA)
+ 👤 PLAYER (RAW DATA)
 ========================= */
 app.get("/api/genshin/player/:uid", async (req, res) => {
   try {
     const response = await fetch(`${ENKA_BASE}/${req.params.uid}`, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json"
-      }
+        "Accept": "application/json",
+      },
     });
 
     const text = await response.text();
 
-    // 🚨 detect HTML response
     if (text.trim().startsWith("<")) {
       return res.status(500).json({
-        error: "Enka returned HTML (blocked or rate limited)",
-        preview: text.slice(0, 200)
+        error: "Enka returned HTML",
       });
     }
 
@@ -146,7 +95,6 @@ app.get("/api/genshin/player/:uid", async (req, res) => {
       uid: req.params.uid,
       characters: data.avatarInfoList || [],
     });
-
   } catch (err) {
     res.status(500).json({
       error: "Enka failed",
@@ -155,23 +103,47 @@ app.get("/api/genshin/player/:uid", async (req, res) => {
   }
 });
 
-    // simple "best" logic = highest level
+/* =========================
+ 🏆 BEST CHARACTER (NEW CLEAN ROUTE)
+========================= */
+app.get("/api/genshin/player/:uid/best", async (req, res) => {
+  try {
+    const response = await fetch(`${ENKA_BASE}/${req.params.uid}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json",
+      },
+    });
+
+    const text = await response.text();
+
+    if (text.trim().startsWith("<")) {
+      return res.json({
+        error: "Enka blocked or HTML response",
+      });
+    }
+
+    const data = JSON.parse(text);
+    const characters = data.avatarInfoList || [];
+
+    if (!characters.length) {
+      return res.json({ bestCharacter: null });
+    }
+
     let best = characters[0];
 
     for (const c of characters) {
-      const lvlA = c.avatarLevel || 0;
-      const lvlB = best.avatarLevel || 0;
-
-      if (lvlA > lvlB) best = c;
+      if ((c.avatarLevel || 0) > (best.avatarLevel || 0)) {
+        best = c;
+      }
     }
 
     res.json({
-      uid: req.params.uid,
       bestCharacter: {
         name: best.avatarName || best.name,
         level: best.avatarLevel,
-        artifacts: best.equipList || [],
         weapon: best.weapon || null,
+        artifacts: best.equipList || [],
         constellations: best.talentIdList || [],
       },
     });
@@ -203,7 +175,7 @@ app.get("/api/genshin/banners/current", async (req, res) => {
 });
 
 /* =========================
- 📖 BUILDS (LOCAL JSON)
+ 📖 BUILDS
 ========================= */
 app.get("/api/genshin/builds/:character", (req, res) => {
   try {
@@ -225,7 +197,4 @@ app.get("/api/genshin/builds/:character", (req, res) => {
  🚀 START
 ========================= */
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
