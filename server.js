@@ -7,66 +7,76 @@ dotenv.config();
 
 const app = express();
 
+
+/* =========================
+   MIDDLEWARE
+========================= */
+
 app.use(cors());
 app.use(express.json());
 
+
+
 /* =========================
-   🧠 MONGODB CONNECT
+   MONGODB
 ========================= */
 
 mongoose
-  .connect(process.env.MONGO_URL)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.log("❌ MongoDB error:", err));
+.connect(process.env.MONGO_URL)
+.then(() => {
+    console.log("✅ MongoDB connected");
+})
+.catch((err)=>{
+    console.log("❌ MongoDB error:", err);
+});
+
 
 
 /* =========================
-   📦 MODELS
+   MODELS
 ========================= */
 
 
-/* 🎮 GAME */
+/* 🎮 GAMES */
 
 const gameSchema = new mongoose.Schema({
 
-  id: Number,
-
-  name: String,
-
-  image: String
+    id:Number,
+    name:String,
+    image:String
 
 });
 
 
 const Game = mongoose.model(
-  "Game",
-  gameSchema
+    "Game",
+    gameSchema
 );
 
 
 
-/* 🎬 MOVIE */
+
+/* 🎬 MOVIES */
 
 const movieSchema = new mongoose.Schema({
 
-  id: Number,
+    id:Number,
+    name:String,
+    image:String,
 
-  name: String,
-
-  image: String,
-
-  status:{
-    type:String,
-    default:"watchlist"
-  }
+    status:{
+        type:String,
+        default:"watchlist"
+    }
 
 });
 
 
 const Movie = mongoose.model(
-  "Movie",
-  movieSchema
+    "Movie",
+    movieSchema
 );
+
 
 
 
@@ -75,42 +85,45 @@ const Movie = mongoose.model(
 
 const diarySchema = new mongoose.Schema({
 
-  author:{
-    type:String,
-    required:true
-  },
+    author:{
+        type:String,
+        required:true
+    },
 
 
-  text:{
-    type:String,
-    required:true
-  },
+    text:{
+        type:String,
+        required:true
+    },
 
 
-  createdAt:{
-    type:Date,
-    default:Date.now
-  }
+    createdAt:{
+        type:Date,
+        default:Date.now
+    }
 
 });
 
 
 const Diary = mongoose.model(
-  "Diary",
-  diarySchema
+    "Diary",
+    diarySchema
 );
 
 
 
+
+
 /* =========================
-   ❤️ PING
+   TEST
 ========================= */
 
 app.get("/ping",(req,res)=>{
 
-  res.send("ok");
+    res.send("ok");
 
 });
+
 
 
 
@@ -119,48 +132,42 @@ app.get("/ping",(req,res)=>{
 ========================= */
 
 
-// Alle Games
-
 app.get("/api/games", async(req,res)=>{
 
-  const games = await Game.find();
+    const games = await Game.find();
 
-  res.json(games);
+    res.json(games);
 
 });
 
 
-
-// Game hinzufügen
 
 app.post("/api/games", async(req,res)=>{
 
-  const game = new Game(req.body);
+    const game = new Game(req.body);
 
-  await game.save();
+    await game.save();
 
-  res.json(game);
+    res.json(game);
 
 });
 
 
-
-// Game löschen
 
 app.delete("/api/games/:id", async(req,res)=>{
 
+    await Game.deleteOne({
+        id:req.params.id
+    });
 
-  await Game.deleteOne({
-    id:req.params.id
-  });
 
-
-  res.json({
-    message:"deleted"
-  });
-
+    res.json({
+        message:"deleted"
+    });
 
 });
+
+
 
 
 
@@ -169,66 +176,51 @@ app.delete("/api/games/:id", async(req,res)=>{
 ========================= */
 
 
-// Alle Movies
-
 app.get("/api/movies", async(req,res)=>{
 
+    const movies = await Movie.find();
 
-const movies = await Movie.find();
-
-
-res.json(movies);
-
+    res.json(movies);
 
 });
 
 
 
-
-// Movie hinzufügen
 
 app.post("/api/movies", async(req,res)=>{
 
+    const movie = new Movie(req.body);
 
-const movie = new Movie(req.body);
+    await movie.save();
 
-
-await movie.save();
-
-
-res.json(movie);
-
+    res.json(movie);
 
 });
 
 
 
-
-// Movie löschen
 
 app.delete("/api/movies/:id", async(req,res)=>{
 
 
-await Movie.deleteOne({
+    await Movie.deleteOne({
 
-id:req.params.id
+        id:req.params.id
+
+    });
+
+
+    res.json({
+
+        message:"deleted"
+
+    });
+
 
 });
 
 
-res.json({
 
-message:"deleted"
-
-});
-
-
-});
-
-
-
-
-// Movie Status ändern
 
 app.patch("/api/movies/:id", async(req,res)=>{
 
@@ -236,20 +228,18 @@ app.patch("/api/movies/:id", async(req,res)=>{
 try{
 
 
-const updated =
+const movie =
 await Movie.findOneAndUpdate(
 
 {
 id:Number(req.params.id)
 },
 
-
 {
 $set:{
 status:req.body.status
 }
 },
-
 
 {
 new:true
@@ -258,9 +248,7 @@ new:true
 );
 
 
-
-res.json(updated);
-
+res.json(movie);
 
 
 }catch(err){
@@ -281,12 +269,14 @@ error:"update failed"
 
 
 
+
+
 /* =========================
    📖 DIARY ROUTES
 ========================= */
 
 
-// Alle Tagebucheinträge
+// Alle Einträge
 
 app.get("/api/diary", async(req,res)=>{
 
@@ -324,7 +314,8 @@ error:"Diary loading failed"
 
 
 
-// Neuer Tagebucheintrag
+
+// Neuer Eintrag
 
 app.post("/api/diary", async(req,res)=>{
 
@@ -368,7 +359,9 @@ error:"Diary save failed"
 
 
 
-// Tagebucheintrag löschen
+
+
+// Löschen
 
 app.delete("/api/diary/:id", async(req,res)=>{
 
@@ -389,13 +382,12 @@ message:"deleted"
 });
 
 
-
 }catch(err){
 
 
 res.status(500).json({
 
-error:"Delete failed"
+error:"delete failed"
 
 });
 
@@ -407,8 +399,11 @@ error:"Delete failed"
 
 
 
+
+
+
 /* =========================
-   🚀 SERVER START
+   START SERVER
 ========================= */
 
 
