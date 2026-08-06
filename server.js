@@ -63,6 +63,7 @@ const Game = mongoose.model(
 
 
 
+
 /* 🎬 MOVIES */
 
 const movieSchema = new mongoose.Schema({
@@ -71,7 +72,11 @@ const movieSchema = new mongoose.Schema({
 
     name:String,
 
-    type:String,
+    type:{
+        type:String,
+        default:"movie"
+    },
+
 
     image:String,
 
@@ -117,6 +122,7 @@ const Movie = mongoose.model(
 
 
 
+
 /* 📖 DIARY */
 
 const diarySchema = new mongoose.Schema({
@@ -152,6 +158,7 @@ const Diary = mongoose.model(
 
 
 
+
 /* =========================
    TEST
 ========================= */
@@ -168,6 +175,7 @@ app.get("/ping",(req,res)=>{
 
 
 
+
 /* =========================
    🎮 GAME ROUTES
 ========================= */
@@ -175,8 +183,10 @@ app.get("/ping",(req,res)=>{
 
 app.get("/api/games",async(req,res)=>{
 
+
     const games =
     await Game.find();
+
 
     res.json(games);
 
@@ -235,14 +245,68 @@ app.delete("/api/games/:id",async(req,res)=>{
 ========================= */
 
 
+
+// LOAD MOVIES
 app.get("/api/movies",async(req,res)=>{
+
+
+try{
 
 
     const movies =
     await Movie.find();
 
 
-    res.json(movies);
+
+    // alte Daten reparieren
+    const fixedMovies = movies.map(movie=>{
+
+
+        return {
+
+            id:movie.id,
+
+            name:movie.name,
+
+            image:movie.image,
+
+
+            type:
+            movie.type ?? "movie",
+
+
+            status:
+            movie.status ?? "watchlist",
+
+
+            episodes:
+            movie.episodes ?? [],
+
+
+            lastSeason:
+            movie.lastSeason ?? 1
+
+        }
+
+
+    });
+
+
+
+    res.json(fixedMovies);
+
+
+}
+catch(err){
+
+    res.status(500).json({
+
+        error:"Movies loading failed"
+
+    });
+
+}
+
 
 });
 
@@ -252,7 +316,29 @@ app.get("/api/movies",async(req,res)=>{
 
 
 
+// ADD MOVIE
 app.post("/api/movies",async(req,res)=>{
+
+
+try{
+
+
+    const exists =
+    await Movie.findOne({
+
+        id:req.body.id
+
+    });
+
+
+
+    if(exists){
+
+        return res.json(exists);
+
+    }
+
+
 
 
     const movie =
@@ -262,12 +348,16 @@ app.post("/api/movies",async(req,res)=>{
 
         name:req.body.name,
 
-        type:req.body.type,
+
+        type:
+        req.body.type ?? "movie",
+
 
         image:req.body.image,
 
 
-        status:req.body.status ?? "watchlist",
+        status:
+        req.body.status ?? "watchlist",
 
 
         episodes:[],
@@ -286,6 +376,20 @@ app.post("/api/movies",async(req,res)=>{
     res.json(movie);
 
 
+}
+catch(err){
+
+
+    res.status(500).json({
+
+        error:err.message
+
+    });
+
+
+}
+
+
 });
 
 
@@ -294,8 +398,7 @@ app.post("/api/movies",async(req,res)=>{
 
 
 
-
-
+// DELETE MOVIE
 app.delete("/api/movies/:id",async(req,res)=>{
 
 
@@ -323,6 +426,8 @@ app.delete("/api/movies/:id",async(req,res)=>{
 
 
 
+// STATUS UPDATE
+
 app.patch("/api/movies/:id",async(req,res)=>{
 
 
@@ -338,7 +443,6 @@ id:Number(req.params.id)
 
 },
 
-
 {
 
 $set:{
@@ -348,7 +452,6 @@ status:req.body.status
 }
 
 },
-
 
 {
 
@@ -389,7 +492,7 @@ error:"update failed"
 
 
 /* =========================
-   📺 EPISODEN SPEICHERN
+   📺 EPISODEN
 ========================= */
 
 
@@ -400,13 +503,9 @@ try{
 
 
 const {
-
 season,
-
 episode,
-
 watched
-
 }=req.body;
 
 
@@ -418,7 +517,6 @@ await Movie.findOne({
 id:Number(req.params.id)
 
 });
-
 
 
 
@@ -436,28 +534,23 @@ error:"Movie not found"
 
 
 
-
 const existing =
 movie.episodes.find(e=>
 
-e.season === season &&
+e.season===season &&
 
-e.episode === episode
+e.episode===episode
 
 );
 
 
 
 
-
 if(existing){
-
 
 existing.watched = watched;
 
-
 }
-
 else{
 
 
@@ -477,7 +570,6 @@ watched
 
 
 
-
 await movie.save();
 
 
@@ -488,7 +580,6 @@ res.json(movie);
 
 }
 catch(err){
-
 
 res.status(500).json({
 
@@ -511,7 +602,7 @@ error:err.message
 
 
 /* =========================
-   📌 LETZTE STAFFEL SPEICHERN
+   📌 LETZTE STAFFEL
 ========================= */
 
 
@@ -558,7 +649,6 @@ res.json(movie);
 }
 catch(err){
 
-
 res.status(500).json({
 
 error:err.message
@@ -580,14 +670,11 @@ error:err.message
 
 
 /* =========================
-   📖 DIARY ROUTES
+   📖 DIARY
 ========================= */
 
 
 app.get("/api/diary",async(req,res)=>{
-
-
-try{
 
 
 const entries =
@@ -600,37 +687,16 @@ createdAt:-1
 });
 
 
-
 res.json(entries);
 
 
-
-}
-catch(err){
-
-
-res.status(500).json({
-
-error:"Diary loading failed"
-
 });
-
-
-}
-
-
-});
-
-
 
 
 
 
 
 app.post("/api/diary",async(req,res)=>{
-
-
-try{
 
 
 const entry =
@@ -643,42 +709,19 @@ text:req.body.text
 });
 
 
-
 await entry.save();
-
 
 
 res.json(entry);
 
 
-
-}
-catch(err){
-
-
-res.status(500).json({
-
-error:"Diary save failed"
-
 });
-
-
-}
-
-
-});
-
-
-
 
 
 
 
 
 app.delete("/api/diary/:id",async(req,res)=>{
-
-
-try{
 
 
 await Diary.findByIdAndDelete(
@@ -688,26 +731,11 @@ req.params.id
 );
 
 
-
 res.json({
 
 message:"deleted"
 
 });
-
-
-}
-catch(err){
-
-
-res.status(500).json({
-
-error:"delete failed"
-
-});
-
-
-}
 
 
 });
@@ -721,7 +749,7 @@ error:"delete failed"
 
 
 /* =========================
-   START SERVER
+   START
 ========================= */
 
 
