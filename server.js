@@ -13,6 +13,7 @@ const app = express();
 ========================= */
 
 app.use(cors());
+
 app.use(express.json());
 
 
@@ -23,12 +24,14 @@ app.use(express.json());
 
 mongoose
 .connect(process.env.MONGO_URL)
-.then(() => {
+.then(()=>{
     console.log("✅ MongoDB connected");
 })
 .catch((err)=>{
-    console.log("❌ MongoDB error:", err);
+    console.log("❌ MongoDB error:",err);
 });
+
+
 
 
 
@@ -42,7 +45,9 @@ mongoose
 const gameSchema = new mongoose.Schema({
 
     id:Number,
+
     name:String,
+
     image:String
 
 });
@@ -56,20 +61,50 @@ const Game = mongoose.model(
 
 
 
+
+
 /* 🎬 MOVIES */
 
 const movieSchema = new mongoose.Schema({
 
     id:Number,
+
     name:String,
+
     image:String,
+
 
     status:{
         type:String,
         default:"watchlist"
+    },
+
+
+    episodes:[
+
+        {
+
+            season:Number,
+
+            episode:Number,
+
+            watched:{
+                type:Boolean,
+                default:false
+            }
+
+        }
+
+    ],
+
+
+    lastSeason:{
+        type:Number,
+        default:1
     }
 
 });
+
 
 
 const Movie = mongoose.model(
@@ -81,9 +116,11 @@ const Movie = mongoose.model(
 
 
 
+
 /* 📖 DIARY */
 
 const diarySchema = new mongoose.Schema({
+
 
     author:{
         type:String,
@@ -102,13 +139,18 @@ const diarySchema = new mongoose.Schema({
         default:Date.now
     }
 
+
 });
+
 
 
 const Diary = mongoose.model(
     "Diary",
     diarySchema
 );
+
+
+
 
 
 
@@ -127,45 +169,72 @@ app.get("/ping",(req,res)=>{
 
 
 
+
+
+
+
 /* =========================
    🎮 GAME ROUTES
 ========================= */
 
 
-app.get("/api/games", async(req,res)=>{
+app.get("/api/games",async(req,res)=>{
 
-    const games = await Game.find();
+
+    const games =
+    await Game.find();
+
 
     res.json(games);
 
+
 });
 
 
 
-app.post("/api/games", async(req,res)=>{
 
-    const game = new Game(req.body);
+
+app.post("/api/games",async(req,res)=>{
+
+
+    const game =
+    new Game(req.body);
+
 
     await game.save();
 
+
     res.json(game);
+
 
 });
 
 
 
-app.delete("/api/games/:id", async(req,res)=>{
+
+
+app.delete("/api/games/:id",async(req,res)=>{
+
 
     await Game.deleteOne({
-        id:req.params.id
+
+        id:Number(req.params.id)
+
     });
 
 
     res.json({
+
         message:"deleted"
+
     });
 
+
 });
+
+
+
+
 
 
 
@@ -176,36 +245,69 @@ app.delete("/api/games/:id", async(req,res)=>{
 ========================= */
 
 
-app.get("/api/movies", async(req,res)=>{
+app.get("/api/movies",async(req,res)=>{
 
-    const movies = await Movie.find();
+
+    const movies =
+    await Movie.find();
+
 
     res.json(movies);
 
+
 });
 
 
 
 
-app.post("/api/movies", async(req,res)=>{
 
-    const movie = new Movie(req.body);
+
+
+app.post("/api/movies",async(req,res)=>{
+
+
+    const movie =
+    new Movie({
+
+        id:req.body.id,
+
+        name:req.body.name,
+
+        image:req.body.image,
+
+        status:req.body.status ?? "watchlist",
+
+        episodes:[],
+
+        lastSeason:1
+
+    });
+
+
 
     await movie.save();
 
+
+
     res.json(movie);
+
 
 });
 
 
 
 
-app.delete("/api/movies/:id", async(req,res)=>{
+
+
+
+
+
+app.delete("/api/movies/:id",async(req,res)=>{
 
 
     await Movie.deleteOne({
 
-        id:req.params.id
+        id:Number(req.params.id)
 
     });
 
@@ -222,7 +324,12 @@ app.delete("/api/movies/:id", async(req,res)=>{
 
 
 
-app.patch("/api/movies/:id", async(req,res)=>{
+
+
+
+
+
+app.patch("/api/movies/:id",async(req,res)=>{
 
 
 try{
@@ -232,26 +339,39 @@ const movie =
 await Movie.findOneAndUpdate(
 
 {
+
 id:Number(req.params.id)
+
 },
 
+
 {
+
 $set:{
+
 status:req.body.status
+
 }
+
 },
 
+
 {
+
 new:true
+
 }
 
 );
 
 
+
 res.json(movie);
 
 
-}catch(err){
+
+}
+catch(err){
 
 
 res.status(500).json({
@@ -271,14 +391,195 @@ error:"update failed"
 
 
 
+
+
+
+/* =========================
+   📺 EPISODES SPEICHERN
+========================= */
+
+
+app.patch("/api/movies/:id/episodes",async(req,res)=>{
+
+
+try{
+
+
+const {
+
+season,
+
+episode,
+
+watched
+
+}=req.body;
+
+
+
+
+const movie =
+await Movie.findOne({
+
+id:Number(req.params.id)
+
+});
+
+
+
+
+
+if(!movie){
+
+return res.status(404).json({
+
+error:"Movie not found"
+
+});
+
+}
+
+
+
+
+
+const existing =
+movie.episodes.find(e=>
+
+e.season === season &&
+
+e.episode === episode
+
+);
+
+
+
+
+
+if(existing){
+
+
+existing.watched = watched;
+
+
+}
+
+else{
+
+
+movie.episodes.push({
+
+season,
+
+episode,
+
+watched
+
+});
+
+
+}
+
+
+
+
+
+await movie.save();
+
+
+
+res.json(movie);
+
+
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:err.message
+
+});
+
+
+}
+
+
+});
+
+
+
+
+
+
+
+
+
+/* =========================
+   📌 LETZTE STAFFEL SPEICHERN
+========================= */
+
+
+app.patch("/api/movies/:id/season",async(req,res)=>{
+
+
+try{
+
+
+const movie =
+await Movie.findOne({
+
+id:Number(req.params.id)
+
+});
+
+
+
+
+movie.lastSeason =
+req.body.lastSeason;
+
+
+
+await movie.save();
+
+
+
+res.json(movie);
+
+
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:err.message
+
+});
+
+
+}
+
+
+});
+
+
+
+
+
+
+
+
+
 /* =========================
    📖 DIARY ROUTES
 ========================= */
 
 
-// Alle Einträge
-
-app.get("/api/diary", async(req,res)=>{
+app.get("/api/diary",async(req,res)=>{
 
 
 try{
@@ -288,15 +589,19 @@ const entries =
 await Diary
 .find()
 .sort({
+
 createdAt:-1
+
 });
+
 
 
 res.json(entries);
 
 
 
-}catch(err){
+}
+catch(err){
 
 
 res.status(500).json({
@@ -315,15 +620,16 @@ error:"Diary loading failed"
 
 
 
-// Neuer Eintrag
 
-app.post("/api/diary", async(req,res)=>{
+
+app.post("/api/diary",async(req,res)=>{
 
 
 try{
 
 
-const entry = new Diary({
+const entry =
+new Diary({
 
 author:req.body.author,
 
@@ -341,7 +647,8 @@ res.json(entry);
 
 
 
-}catch(err){
+}
+catch(err){
 
 
 res.status(500).json({
@@ -361,16 +668,18 @@ error:"Diary save failed"
 
 
 
-// Löschen
 
-app.delete("/api/diary/:id", async(req,res)=>{
+
+app.delete("/api/diary/:id",async(req,res)=>{
 
 
 try{
 
 
 await Diary.findByIdAndDelete(
+
 req.params.id
+
 );
 
 
@@ -382,7 +691,8 @@ message:"deleted"
 });
 
 
-}catch(err){
+}
+catch(err){
 
 
 res.status(500).json({
@@ -402,18 +712,27 @@ error:"delete failed"
 
 
 
+
+
+
 /* =========================
    START SERVER
 ========================= */
 
 
-const PORT = process.env.PORT || 3000;
+const PORT =
+process.env.PORT || 3000;
+
 
 
 app.listen(PORT,()=>{
 
+
 console.log(
+
 `🚀 Server läuft auf Port ${PORT}`
+
 );
+
 
 });
