@@ -71,6 +71,8 @@ const movieSchema = new mongoose.Schema({
 
     name:String,
 
+    type:String,
+
     image:String,
 
 
@@ -81,7 +83,6 @@ const movieSchema = new mongoose.Schema({
 
 
     episodes:[
-
         {
 
             season:Number,
@@ -94,7 +95,6 @@ const movieSchema = new mongoose.Schema({
             }
 
         }
-
     ],
 
 
@@ -104,7 +104,6 @@ const movieSchema = new mongoose.Schema({
     }
 
 });
-
 
 
 const Movie = mongoose.model(
@@ -117,10 +116,10 @@ const Movie = mongoose.model(
 
 
 
+
 /* 📖 DIARY */
 
 const diarySchema = new mongoose.Schema({
-
 
     author:{
         type:String,
@@ -139,16 +138,13 @@ const diarySchema = new mongoose.Schema({
         default:Date.now
     }
 
-
 });
-
 
 
 const Diary = mongoose.model(
     "Diary",
     diarySchema
 );
-
 
 
 
@@ -172,7 +168,6 @@ app.get("/ping",(req,res)=>{
 
 
 
-
 /* =========================
    🎮 GAME ROUTES
 ========================= */
@@ -180,13 +175,10 @@ app.get("/ping",(req,res)=>{
 
 app.get("/api/games",async(req,res)=>{
 
-
     const games =
     await Game.find();
 
-
     res.json(games);
-
 
 });
 
@@ -205,7 +197,6 @@ app.post("/api/games",async(req,res)=>{
 
 
     res.json(game);
-
 
 });
 
@@ -228,7 +219,6 @@ app.delete("/api/games/:id",async(req,res)=>{
         message:"deleted"
 
     });
-
 
 });
 
@@ -254,7 +244,6 @@ app.get("/api/movies",async(req,res)=>{
 
     res.json(movies);
 
-
 });
 
 
@@ -273,11 +262,16 @@ app.post("/api/movies",async(req,res)=>{
 
         name:req.body.name,
 
+        type:req.body.type,
+
         image:req.body.image,
+
 
         status:req.body.status ?? "watchlist",
 
+
         episodes:[],
+
 
         lastSeason:1
 
@@ -395,7 +389,7 @@ error:"update failed"
 
 
 /* =========================
-   📺 EPISODES SPEICHERN
+   📺 EPISODEN SPEICHERN
 ========================= */
 
 
@@ -534,6 +528,17 @@ id:Number(req.params.id)
 
 });
 
+
+
+if(!movie){
+
+return res.status(404).json({
+
+error:"Movie not found"
+
+});
+
+}
 
 
 
