@@ -235,6 +235,149 @@ app.delete("/api/games/:id",async(req,res)=>{
 ========================= */
 
 
+/*
+   Dieser Endpoint kann jetzt:
+
+   - Status ändern
+   - Watcher ändern
+   - Episoden speichern
+   - letzte Staffel speichern
+
+   ohne die anderen Werte zu überschreiben.
+*/
+
+app.patch("/api/movies/:id",async(req,res)=>{
+
+    try{
+
+        const update = {};
+
+
+        /* =========================
+           STATUS
+        ========================= */
+
+        if(
+            req.body.status !== undefined
+        ){
+
+            update.status =
+                req.body.status;
+
+        }
+
+
+        /* =========================
+           👤 WATCHER
+        ========================= */
+
+        if(
+            req.body.watcher !== undefined
+        ){
+
+            update.watcher =
+                req.body.watcher;
+
+        }
+
+
+        /* =========================
+           📺 EPISODES
+        ========================= */
+
+        if(
+            req.body.episodes !== undefined
+        ){
+
+            update.episodes =
+                req.body.episodes;
+
+        }
+
+
+        /* =========================
+           📌 LETZTE STAFFEL
+        ========================= */
+
+        if(
+            req.body.lastSeason !== undefined
+        ){
+
+            update.lastSeason =
+                req.body.lastSeason;
+
+        }
+
+
+
+        const movie =
+        await Movie.findOneAndUpdate(
+
+            {
+
+                id:Number(
+                    req.params.id
+                )
+
+            },
+
+            {
+
+                $set:update
+
+            },
+
+            {
+
+                new:true
+
+            }
+
+        );
+
+
+
+        if(!movie){
+
+            return res.status(404).json({
+
+                error:"Movie not found"
+
+            });
+
+        }
+
+
+
+        res.json(movie);
+
+    }
+    catch(err){
+
+        console.log(
+            "❌ Movie update error:",
+            err
+        );
+
+        res.status(500).json({
+
+            error:"update failed"
+
+        });
+
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
 app.get("/api/movies",async(req,res)=>{
 
 
