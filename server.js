@@ -82,14 +82,6 @@ const movieSchema = new mongoose.Schema({
     },
 
 
-    /* 👤 WATCHER */
-
-    watcher:{
-        type:String,
-        default:null
-    },
-
-
     episodes:[
         {
 
@@ -183,21 +175,10 @@ app.get("/ping",(req,res)=>{
 
 app.get("/api/games",async(req,res)=>{
 
-    try{
+    const games =
+    await Game.find();
 
-        const games =
-        await Game.find();
-
-        res.json(games);
-
-    }
-    catch(err){
-
-        res.status(500).json({
-            error:"Games loading failed"
-        });
-
-    }
+    res.json(games);
 
 });
 
@@ -207,23 +188,15 @@ app.get("/api/games",async(req,res)=>{
 
 app.post("/api/games",async(req,res)=>{
 
-    try{
 
-        const game =
-        new Game(req.body);
+    const game =
+    new Game(req.body);
 
-        await game.save();
 
-        res.json(game);
+    await game.save();
 
-    }
-    catch(err){
 
-        res.status(500).json({
-            error:"Game save failed"
-        });
-
-    }
+    res.json(game);
 
 });
 
@@ -233,28 +206,19 @@ app.post("/api/games",async(req,res)=>{
 
 app.delete("/api/games/:id",async(req,res)=>{
 
-    try{
 
-        await Game.deleteOne({
+    await Game.deleteOne({
 
-            id:Number(req.params.id)
+        id:Number(req.params.id)
 
-        });
+    });
 
-        res.json({
 
-            message:"deleted"
+    res.json({
 
-        });
+        message:"deleted"
 
-    }
-    catch(err){
-
-        res.status(500).json({
-            error:"Game delete failed"
-        });
-
-    }
+    });
 
 });
 
@@ -270,155 +234,6 @@ app.delete("/api/games/:id",async(req,res)=>{
    🎬 MOVIE ROUTES
 ========================= */
 
-
-/* 📥 ALLE FILME / SERIEN */
-
-app.get("/api/movies",async(req,res)=>{
-
-    try{
-
-        const movies =
-        await Movie.find();
-
-        res.json(movies);
-
-    }
-    catch(err){
-
-        res.status(500).json({
-
-            error:"Movies loading failed"
-
-        });
-
-    }
-
-});
-
-
-
-
-
-
-
-/* ➕ FILM / SERIE HINZUFÜGEN */
-
-app.post("/api/movies",async(req,res)=>{
-
-    try{
-
-        const movie =
-        new Movie({
-
-            id:req.body.id,
-
-            name:req.body.name,
-
-            type:req.body.type,
-
-            image:req.body.image,
-
-
-            status:
-                req.body.status ??
-                "watchlist",
-
-
-            /* 👤 WATCHER SPEICHERN */
-
-            watcher:
-                req.body.watcher ??
-                null,
-
-
-            episodes:
-                req.body.episodes ??
-                [],
-
-
-            lastSeason:
-                req.body.lastSeason ??
-                1
-
-        });
-
-
-
-        await movie.save();
-
-
-
-        res.json(movie);
-
-    }
-    catch(err){
-
-        console.log(
-            "❌ Movie save error:",
-            err
-        );
-
-        res.status(500).json({
-
-            error:"Movie save failed"
-
-        });
-
-    }
-
-});
-
-
-
-
-
-
-
-
-
-/* ❌ FILM / SERIE LÖSCHEN */
-
-app.delete("/api/movies/:id",async(req,res)=>{
-
-    try{
-
-        await Movie.deleteOne({
-
-            id:Number(req.params.id)
-
-        });
-
-
-        res.json({
-
-            message:"deleted"
-
-        });
-
-    }
-    catch(err){
-
-        res.status(500).json({
-
-            error:"Movie delete failed"
-
-        });
-
-    }
-
-});
-
-
-
-
-
-
-
-
-
-/* =========================
-   🔄 MOVIE PATCH
-========================= */
 
 /*
    Dieser Endpoint kann jetzt:
@@ -562,98 +377,271 @@ app.patch("/api/movies/:id",async(req,res)=>{
 
 
 
+
+app.get("/api/movies",async(req,res)=>{
+
+
+    const movies =
+    await Movie.find();
+
+
+    res.json(movies);
+
+});
+
+
+
+
+
+
+
+app.post("/api/movies",async(req,res)=>{
+
+
+    const movie =
+    new Movie({
+
+        id:req.body.id,
+
+        name:req.body.name,
+
+        type:req.body.type,
+
+        image:req.body.image,
+
+
+        status:req.body.status ?? "watchlist",
+
+
+        episodes:[],
+
+
+        lastSeason:1
+
+    });
+
+
+
+    await movie.save();
+
+
+
+    res.json(movie);
+
+
+});
+
+
+
+
+
+
+
+
+
+app.delete("/api/movies/:id",async(req,res)=>{
+
+
+    await Movie.deleteOne({
+
+        id:Number(req.params.id)
+
+    });
+
+
+    res.json({
+
+        message:"deleted"
+
+    });
+
+
+});
+
+
+
+
+
+
+
+
+
+app.patch("/api/movies/:id",async(req,res)=>{
+
+
+try{
+
+
+const movie =
+await Movie.findOneAndUpdate(
+
+{
+
+id:Number(req.params.id)
+
+},
+
+
+{
+
+$set:{
+
+status:req.body.status
+
+}
+
+},
+
+
+{
+
+new:true
+
+}
+
+);
+
+
+
+res.json(movie);
+
+
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:"update failed"
+
+});
+
+
+}
+
+
+});
+
+
+
+
+
+
+
+
+
 /* =========================
    📺 EPISODEN SPEICHERN
 ========================= */
 
+
 app.patch("/api/movies/:id/episodes",async(req,res)=>{
 
-    try{
 
-        const {
-
-            season,
-
-            episode,
-
-            watched
-
-        } = req.body;
+try{
 
 
+const {
 
-        const movie =
-        await Movie.findOne({
+season,
 
-            id:Number(
-                req.params.id
-            )
+episode,
 
-        });
+watched
+
+}=req.body;
 
 
 
-        if(!movie){
 
-            return res.status(404).json({
+const movie =
+await Movie.findOne({
 
-                error:"Movie not found"
+id:Number(req.params.id)
 
-            });
-
-        }
+});
 
 
 
-        const existing =
-        movie.episodes.find(e=>
-
-            e.season === season &&
-
-            e.episode === episode
-
-        );
 
 
+if(!movie){
 
-        if(existing){
+return res.status(404).json({
 
-            existing.watched =
-                watched;
+error:"Movie not found"
 
-        }
-        else{
+});
 
-            movie.episodes.push({
-
-                season,
-
-                episode,
-
-                watched
-
-            });
-
-        }
+}
 
 
 
-        await movie.save();
+
+
+const existing =
+movie.episodes.find(e=>
+
+e.season === season &&
+
+e.episode === episode
+
+);
 
 
 
-        res.json(movie);
 
-    }
-    catch(err){
 
-        res.status(500).json({
+if(existing){
 
-            error:err.message
 
-        });
+existing.watched = watched;
 
-    }
+
+}
+
+else{
+
+
+movie.episodes.push({
+
+season,
+
+episode,
+
+watched
+
+});
+
+
+}
+
+
+
+
+
+await movie.save();
+
+
+
+res.json(movie);
+
+
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:err.message
+
+});
+
+
+}
+
 
 });
 
@@ -669,54 +657,60 @@ app.patch("/api/movies/:id/episodes",async(req,res)=>{
    📌 LETZTE STAFFEL SPEICHERN
 ========================= */
 
+
 app.patch("/api/movies/:id/season",async(req,res)=>{
 
-    try{
 
-        const movie =
-        await Movie.findOne({
-
-            id:Number(
-                req.params.id
-            )
-
-        });
+try{
 
 
+const movie =
+await Movie.findOne({
 
-        if(!movie){
+id:Number(req.params.id)
 
-            return res.status(404).json({
-
-                error:"Movie not found"
-
-            });
-
-        }
+});
 
 
 
-        movie.lastSeason =
-            req.body.lastSeason;
+if(!movie){
+
+return res.status(404).json({
+
+error:"Movie not found"
+
+});
+
+}
 
 
 
-        await movie.save();
+movie.lastSeason =
+req.body.lastSeason;
 
 
 
-        res.json(movie);
+await movie.save();
 
-    }
-    catch(err){
 
-        res.status(500).json({
 
-            error:err.message
+res.json(movie);
 
-        });
 
-    }
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:err.message
+
+});
+
+
+}
+
 
 });
 
@@ -735,31 +729,38 @@ app.patch("/api/movies/:id/season",async(req,res)=>{
 
 app.get("/api/diary",async(req,res)=>{
 
-    try{
 
-        const entries =
-        await Diary
-        .find()
-        .sort({
-
-            createdAt:-1
-
-        });
+try{
 
 
+const entries =
+await Diary
+.find()
+.sort({
 
-        res.json(entries);
+createdAt:-1
 
-    }
-    catch(err){
+});
 
-        res.status(500).json({
 
-            error:"Diary loading failed"
 
-        });
+res.json(entries);
 
-    }
+
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:"Diary loading failed"
+
+});
+
+
+}
+
 
 });
 
@@ -771,35 +772,42 @@ app.get("/api/diary",async(req,res)=>{
 
 app.post("/api/diary",async(req,res)=>{
 
-    try{
 
-        const entry =
-        new Diary({
-
-            author:req.body.author,
-
-            text:req.body.text
-
-        });
+try{
 
 
+const entry =
+new Diary({
 
-        await entry.save();
+author:req.body.author,
+
+text:req.body.text
+
+});
 
 
 
-        res.json(entry);
+await entry.save();
 
-    }
-    catch(err){
 
-        res.status(500).json({
 
-            error:"Diary save failed"
+res.json(entry);
 
-        });
 
-    }
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:"Diary save failed"
+
+});
+
+
+}
+
 
 });
 
@@ -809,34 +817,41 @@ app.post("/api/diary",async(req,res)=>{
 
 
 
+
 app.delete("/api/diary/:id",async(req,res)=>{
 
-    try{
 
-        await Diary.findByIdAndDelete(
-
-            req.params.id
-
-        );
+try{
 
 
+await Diary.findByIdAndDelete(
 
-        res.json({
+req.params.id
 
-            message:"deleted"
+);
 
-        });
 
-    }
-    catch(err){
 
-        res.status(500).json({
+res.json({
 
-            error:"delete failed"
+message:"deleted"
 
-        });
+});
 
-    }
+
+}
+catch(err){
+
+
+res.status(500).json({
+
+error:"delete failed"
+
+});
+
+
+}
+
 
 });
 
@@ -852,17 +867,20 @@ app.delete("/api/diary/:id",async(req,res)=>{
    START SERVER
 ========================= */
 
+
 const PORT =
-    process.env.PORT || 3000;
+process.env.PORT || 3000;
 
 
 
 app.listen(PORT,()=>{
 
-    console.log(
 
-        `🚀 Server läuft auf Port ${PORT}`
+console.log(
 
-    );
+`🚀 Server läuft auf Port ${PORT}`
 
-});rc
+);
+
+
+});
